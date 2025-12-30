@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTriageEmergency } from '../hooks';
 
+
 export default function EmergencyForm({ onEmergencyCreated }) {
   const [formData, setFormData] = useState({
     patientName: '',
@@ -13,7 +14,9 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     longitude: ''
   });
 
+
   const { mutate: submitEmergency, isPending, error } = useTriageEmergency();
+
 
   const handleChange = (e) => {
     setFormData({
@@ -22,23 +25,25 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     });
   };
 
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
     const emergencyData = {
       patientName: formData.patientName,
-      age: parseInt(formData.age),
+      age: formData.age ? parseInt(formData.age) : null,
       vitals: {
         bloodPressure: formData.bloodPressure,
-        heartRate: parseInt(formData.heartRate),
-        oxygenLevel: parseInt(formData.oxygenLevel)
+        heartRate: formData.heartRate ? parseInt(formData.heartRate) : null,
+        oxygenLevel: formData.oxygenLevel ? parseInt(formData.oxygenLevel) : null
       },
       symptoms: formData.symptoms,
       location: {
-        lat: parseFloat(formData.latitude),
-        lng: parseFloat(formData.longitude)
+        lat: formData.latitude ? parseFloat(formData.latitude) : null,
+        lng: formData.longitude ? parseFloat(formData.longitude) : null
       }
     };
+
 
     submitEmergency(emergencyData, {
       onSuccess: (data) => {
@@ -59,6 +64,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     });
   };
 
+
   // Auto-fill with test data
   const fillTestData = () => {
     setFormData({
@@ -73,6 +79,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     });
   };
 
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -82,32 +89,32 @@ export default function EmergencyForm({ onEmergencyCreated }) {
         </button>
       </div>
 
+
       <form onSubmit={handleSubmit} style={styles.form}>
         {/* Patient Info */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Patient Information</h3>
           
           <div style={styles.formGroup}>
-            <label style={styles.label}>Patient Name *</label>
+            <label style={styles.label}>Patient Name</label>
             <input
               type="text"
               name="patientName"
               value={formData.patientName}
               onChange={handleChange}
-              required
               style={styles.input}
               placeholder="Enter full name"
             />
           </div>
 
+
           <div style={styles.formGroup}>
-            <label style={styles.label}>Age *</label>
+            <label style={styles.label}>Age</label>
             <input
               type="number"
               name="age"
               value={formData.age}
               onChange={handleChange}
-              required
               style={styles.input}
               placeholder="Enter age"
               min="0"
@@ -116,32 +123,32 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           </div>
         </div>
 
+
         {/* Vitals */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Vital Signs</h3>
           
           <div style={styles.formGroup}>
-            <label style={styles.label}>Blood Pressure *</label>
+            <label style={styles.label}>Blood Pressure</label>
             <input
               type="text"
               name="bloodPressure"
               value={formData.bloodPressure}
               onChange={handleChange}
-              required
               style={styles.input}
               placeholder="e.g., 120/80"
             />
           </div>
 
+
           <div style={styles.row}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Heart Rate (bpm) *</label>
+              <label style={styles.label}>Heart Rate (bpm)</label>
               <input
                 type="number"
                 name="heartRate"
                 value={formData.heartRate}
                 onChange={handleChange}
-                required
                 style={styles.input}
                 placeholder="e.g., 75"
                 min="30"
@@ -149,14 +156,14 @@ export default function EmergencyForm({ onEmergencyCreated }) {
               />
             </div>
 
+
             <div style={styles.formGroup}>
-              <label style={styles.label}>Oxygen Level (%) *</label>
+              <label style={styles.label}>Oxygen Level (%)</label>
               <input
                 type="number"
                 name="oxygenLevel"
                 value={formData.oxygenLevel}
                 onChange={handleChange}
-                required
                 style={styles.input}
                 placeholder="e.g., 98"
                 min="50"
@@ -166,16 +173,16 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           </div>
         </div>
 
+
         {/* Symptoms */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Symptoms</h3>
           <div style={styles.formGroup}>
-            <label style={styles.label}>Describe Symptoms *</label>
+            <label style={styles.label}>Describe Symptoms</label>
             <textarea
               name="symptoms"
               value={formData.symptoms}
               onChange={handleChange}
-              required
               style={styles.textarea}
               placeholder="Describe all symptoms in detail..."
               rows="4"
@@ -183,33 +190,33 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           </div>
         </div>
 
+
         {/* Location */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Location</h3>
           <div style={styles.row}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Latitude *</label>
+              <label style={styles.label}>Latitude</label>
               <input
                 type="number"
                 step="any"
                 name="latitude"
                 value={formData.latitude}
                 onChange={handleChange}
-                required
                 style={styles.input}
                 placeholder="28.7041"
               />
             </div>
 
+
             <div style={styles.formGroup}>
-              <label style={styles.label}>Longitude *</label>
+              <label style={styles.label}>Longitude</label>
               <input
                 type="number"
                 step="any"
                 name="longitude"
                 value={formData.longitude}
                 onChange={handleChange}
-                required
                 style={styles.input}
                 placeholder="77.1025"
               />
@@ -217,12 +224,14 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           </div>
         </div>
 
+
         {/* Error Display */}
         {error && (
           <div style={styles.error}>
             ❌ Error: {error.message}
           </div>
         )}
+
 
         {/* Submit Button */}
         <button 
@@ -240,6 +249,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     </div>
   );
 }
+
 
 const styles = {
   container: {
