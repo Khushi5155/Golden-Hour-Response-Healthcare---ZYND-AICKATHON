@@ -6,6 +6,7 @@ import TriageResults from './components/TriageResults';
 import AgentStatus from './components/AgentStatus';
 import HospitalList from './components/HospitalList';
 
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -16,14 +17,17 @@ const queryClient = new QueryClient({
   },
 });
 
+
 function Dashboard() {
   const [emergencyId, setEmergencyId] = useState(null);
   const [triageData, setTriageData] = useState(null);
+
 
   const handleEmergencyCreated = (id, data) => {
     setEmergencyId(id);
     setTriageData(data);
   };
+
 
   return (
     <div style={styles.dashboard}>
@@ -31,6 +35,7 @@ function Dashboard() {
         <h1 style={styles.mainTitle}>⚡ Golden Hour Response Dashboard</h1>
         <p style={styles.subtitle}>AI-Powered Emergency Healthcare System</p>
       </header>
+
 
       <EmergencyForm onEmergencyCreated={handleEmergencyCreated} />
       
@@ -43,14 +48,17 @@ function Dashboard() {
   );
 }
 
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Dashboard />
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* Only show devtools in development, hidden in production */}
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
 }
+
 
 const styles = {
   dashboard: {
@@ -78,5 +86,6 @@ const styles = {
     fontSize: '18px'
   }
 };
+
 
 export default App;
