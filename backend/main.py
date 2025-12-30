@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.api import routes
+from src.api import routes, websocket
 import uvicorn
 
 app = FastAPI(
@@ -9,17 +9,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS (Allow Frontend to talk to Backend)
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allow all for hackathon
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include Routes
+# Include REST API routes
 app.include_router(routes.router, prefix="/api/v1")
+
+# Include WebSocket routes
+app.include_router(websocket.router)
 
 @app.get("/")
 async def root():
