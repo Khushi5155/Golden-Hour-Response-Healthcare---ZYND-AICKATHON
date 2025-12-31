@@ -47,6 +47,6 @@ class TriageAgent(BaseAgent):
             "recommended_specialists": specialists
         }
 
-    # ✅ Add this method so routes.py works
+    # Add this method so routes.py works
     def classify_emergency(self, payload: dict) -> dict:
         return self.execute(payload)

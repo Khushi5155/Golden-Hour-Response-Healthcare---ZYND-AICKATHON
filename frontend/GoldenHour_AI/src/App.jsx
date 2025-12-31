@@ -8,6 +8,7 @@ import TriageResults from './components/TriageResults';
 import AgentStatus from './components/AgentStatus';
 import HospitalList from './components/HospitalList';
 
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -18,34 +19,53 @@ const queryClient = new QueryClient({
   },
 });
 
+
 function Dashboard() {
   const [showSplash, setShowSplash] = useState(true);
   const [showLanding, setShowLanding] = useState(true);
   const [emergencyId, setEmergencyId] = useState(null);
   const [triageData, setTriageData] = useState(null);
 
+  // Set body background to dark on mount
+  useEffect(() => {
+    document.body.style.backgroundColor = '#0f0f0f';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    
+    return () => {
+      document.body.style.backgroundColor = '';
+      document.body.style.margin = '';
+      document.body.style.padding = '';
+    };
+  }, []);
+
   const handleEmergencyCreated = (id, data) => {
     setEmergencyId(id);
     setTriageData(data);
   };
 
+
   const handleEmergencyClick = () => {
     setShowLanding(false);
   };
 
+
   const handleSplashComplete = () => {
     setShowSplash(false);
   };
+
 
   // Show splash screen for 2 seconds on first load
   if (showSplash) {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
+
   // Show landing page until user clicks emergency
   if (showLanding) {
     return <LandingPage onEmergency={handleEmergencyClick} />;
   }
+
 
   // Show main emergency dashboard
   return (
@@ -58,10 +78,12 @@ function Dashboard() {
         ← Back to Home
       </button>
 
+
       <header style={styles.header}>
         <h1 style={styles.mainTitle}>⚡ Golden Hour Response Dashboard</h1>
         <p style={styles.subtitle}>AI-Powered Emergency Healthcare System</p>
       </header>
+
 
       <EmergencyForm onEmergencyCreated={handleEmergencyCreated} />
       
@@ -74,6 +96,7 @@ function Dashboard() {
   );
 }
 
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -83,13 +106,17 @@ function App() {
   );
 }
 
+
 const styles = {
   dashboard: {
     minHeight: '100vh',
     backgroundColor: '#0f0f0f',
     padding: '20px',
     fontFamily: 'Arial, sans-serif',
-    position: 'relative'
+    position: 'relative',
+    margin: '0',
+    width: '100%',
+    boxSizing: 'border-box'
   },
   backButton: {
     position: 'fixed',
@@ -102,12 +129,13 @@ const styles = {
     borderRadius: '20px',
     cursor: 'pointer',
     fontSize: '14px',
-    zIndex: 100,
+    zIndex: 1001,
     transition: 'all 0.3s ease'
   },
   header: {
     textAlign: 'center',
     marginBottom: '30px',
+    marginTop: '50px',
     padding: '20px',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     borderRadius: '15px'
@@ -124,5 +152,6 @@ const styles = {
     fontSize: '18px'
   }
 };
+
 
 export default App;
