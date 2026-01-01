@@ -162,6 +162,7 @@ http://localhost:8000/docs
 
 ```bash
 cd frontend/GoldenHour_AI
+rm -rf node_modules package-lock.json
 npm install
 npm run dev
 
