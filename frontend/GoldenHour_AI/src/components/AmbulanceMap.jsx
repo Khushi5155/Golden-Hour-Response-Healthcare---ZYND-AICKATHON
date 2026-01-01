@@ -1,5 +1,5 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -49,15 +49,9 @@ function AmbulanceTracker({
   const map = useMap();
   const [currentPosition, setCurrentPosition] = useState(ambulanceStartLocation);
   const [arrived, setArrived] = useState(false);
-  const animationRef = useRef(null);
-  const hasStartedRef = useRef(false);
 
   useEffect(() => {
-    // Only run animation once
-    if (!needsAmbulance || hasStartedRef.current || arrived) return;
-
-    hasStartedRef.current = true;
-    console.log('🚑 Starting ambulance animation...');
+    if (!needsAmbulance) return;
 
     const startLat = ambulanceStartLocation.lat;
     const startLng = ambulanceStartLocation.lng;
@@ -67,7 +61,7 @@ function AmbulanceTracker({
     const steps = 100;
     let currentStep = 0;
 
-    animationRef.current = setInterval(() => {
+    const interval = setInterval(() => {
       currentStep++;
       const progress = currentStep / steps;
 
@@ -75,39 +69,30 @@ function AmbulanceTracker({
       const newLng = startLng + (endLng - startLng) * progress;
 
       setCurrentPosition({ lat: newLat, lng: newLng });
-      
-      // Only move map view every 10 steps to reduce jumpiness
-      if (currentStep % 10 === 0) {
-        map.setView([newLat, newLng], 13, { animate: true });
-      }
+      map.setView([newLat, newLng], 13);
 
       if (currentStep >= steps) {
-        console.log('🚑 Ambulance arrived!');
-        clearInterval(animationRef.current);
+        clearInterval(interval);
         setArrived(true);
-        setCurrentPosition(emergencyLocation); // Ensure it stops exactly at emergency
         if (onAmbulanceArrival) {
           onAmbulanceArrival();
         }
       }
-    }, 100); // 100ms per step = 10 seconds total
+    }, 100);
 
-    return () => {
-      if (animationRef.current) {
-        clearInterval(animationRef.current);
-      }
-    };
-  }, []); // Empty dependency array - only run once!
-
-  if (!needsAmbulance) return null;
+    return () => clearInterval(interval);
+  }, [ambulanceStartLocation, emergencyLocation, needsAmbulance, map, onAmbulanceArrival]);
 
   return (
-    <Marker position={[currentPosition.lat, currentPosition.lng]} icon={ambulanceIcon}>
-      <Popup>
-        <strong>🚑 Ambulance</strong><br />
-        {arrived ? '✅ Arrived at Emergency!' : '🚦 En Route...'}
-      </Popup>
-    </Marker>
+    <>
+      {needsAmbulance && currentPosition && (
+        <Marker position={[currentPosition.lat, currentPosition.lng]} icon={ambulanceIcon}>
+          <Popup>
+            🚑 Ambulance {arrived ? '(Arrived!)' : '(En Route)'}
+          </Popup>
+        </Marker>
+      )}
+    </>
   );
 }
 
@@ -184,8 +169,8 @@ export default function AmbulanceMap({
           
           <Marker position={center} icon={emergencyIcon}>
             <Popup>
-              <strong>🚨 Emergency Location</strong><br />
-              Patient needs immediate help
+              🚨 Emergency Location<br />
+              Patient location
             </Popup>
           </Marker>
           
@@ -194,8 +179,8 @@ export default function AmbulanceMap({
             icon={hospitalIcon}
           >
             <Popup>
-              <strong>🏥 {hospitalLocation.name || 'Hospital'}</strong><br />
-              Selected destination
+              🏥 {hospitalLocation.name || 'Selected Hospital'}<br />
+              Destination
             </Popup>
           </Marker>
 

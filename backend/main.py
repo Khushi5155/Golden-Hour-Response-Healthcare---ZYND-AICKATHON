@@ -26,8 +26,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include REST API routes
-app.include_router(routes.router, prefix="/api/v1")
+# Include REST API routes - FIXED: Changed prefix to /api (removing /v1)
+app.include_router(routes.router, prefix="/api")
 
 # Include WebSocket routes (if available)
 if HAS_WEBSOCKET:
@@ -41,8 +41,24 @@ async def root():
         "version": "1.0.0"
     }
 
+@app.get("/health")
+async def health():
+    return {
+        "status": "healthy",
+        "endpoints": {
+            "triage": "/api/triage",
+            "hospitals": "/api/hospitals/{emergency_id}",
+            "ambulance": "/api/ambulance/{emergency_id}",
+            "selected_hospital": "/api/hospitals/{emergency_id}/selected",
+            "status": "/api/status/{emergency_id}",
+            "notify": "/api/notify"
+        }
+    }
+
 if __name__ == "__main__":
     print("🚀 Starting Golden Hour Response System...")
     print("📍 API Docs: http://localhost:8000/docs")
     print("🏥 Health: http://localhost:8000/")
+    print("🚑 Ambulance endpoint: http://localhost:8000/api/ambulance/{emergency_id}")
+    print("🏥 Hospital endpoint: http://localhost:8000/api/hospitals/{emergency_id}/selected")
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
