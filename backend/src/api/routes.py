@@ -87,7 +87,7 @@ async def triage_emergency(
 
 
 # =====================
-# Hospital Endpoint (NEW - fixes 404 error)
+# Hospital Endpoint (UPDATED - Returns Mock Hospital Data)
 # =====================
 
 @router.get("/hospitals/{emergency_id}")
@@ -99,37 +99,98 @@ async def get_hospital_for_emergency(
     Get assigned hospital for an emergency
     """
     try:
+        print(f"🏥 Fetching hospitals for Emergency ID: {emergency_id}")
+        
         # Fetch emergency from database
         emergency = db.query(Emergency).filter(Emergency.id == emergency_id).first()
         
         if not emergency:
             raise HTTPException(status_code=404, detail="Emergency not found")
         
-        if not emergency.assigned_hospital_id:
-            return {
-                "status": "pending", 
-                "message": "Hospital assignment in progress",
-                "emergencyId": emergency_id
-            }
+        # Update emergency status if still registered
+        if emergency.status == "REGISTERED":
+            emergency.status = "ASSIGNED"
+            emergency.severity = "HIGH"
+            emergency.assigned_hospital_id = 1
+            emergency.estimated_arrival_time = "12 minutes"
+            db.commit()
+            db.refresh(emergency)
+            print(f"✅ Updated emergency status to ASSIGNED")
         
-        # TODO: Fetch hospital details from your Hospital table
-        # For now, return mock data
+        # MOCK DATA FOR TESTING - Replace with real hospital query later
+        mock_hospitals = [
+            {
+                "id": 1,
+                "name": "All India Institute of Medical Sciences (AIIMS)",
+                "address": "Ansari Nagar, New Delhi - 110029",
+                "distance": 3.2,
+                "eta": 12,
+                "bedsAvailable": 15,
+                "phone": "+91-11-2658-8500",
+                "specialties": ["Emergency Medicine", "Cardiology", "Trauma", "ICU"],
+                "isRecommended": True
+            },
+            {
+                "id": 2,
+                "name": "Fortis Hospital",
+                "address": "Sector 62, Noida, Uttar Pradesh",
+                "distance": 5.8,
+                "eta": 18,
+                "bedsAvailable": 10,
+                "phone": "+91-120-500-3333",
+                "specialties": ["Emergency Medicine", "Neurology", "Orthopedics"],
+                "isRecommended": False
+            },
+            {
+                "id": 3,
+                "name": "Max Super Specialty Hospital",
+                "address": "Saket, New Delhi - 110017",
+                "distance": 7.5,
+                "eta": 25,
+                "bedsAvailable": 8,
+                "phone": "+91-11-2651-5050",
+                "specialties": ["Emergency Medicine", "General Surgery", "ICU"],
+                "isRecommended": False
+            },
+            {
+                "id": 4,
+                "name": "Apollo Hospital",
+                "address": "Mathura Road, Sarita Vihar, Delhi",
+                "distance": 9.2,
+                "eta": 30,
+                "bedsAvailable": 6,
+                "phone": "+91-11-2692-5858",
+                "specialties": ["Emergency Medicine", "Cardiology", "Pulmonology"],
+                "isRecommended": False
+            },
+            {
+                "id": 5,
+                "name": "Safdarjung Hospital",
+                "address": "Ring Road, New Delhi - 110029",
+                "distance": 4.5,
+                "eta": 15,
+                "bedsAvailable": 12,
+                "phone": "+91-11-2673-0000",
+                "specialties": ["Emergency Medicine", "Trauma", "General Medicine"],
+                "isRecommended": False
+            }
+        ]
+        
+        print(f"✅ Returning {len(mock_hospitals)} hospitals for Emergency {emergency_id}")
+        
         return {
             "emergencyId": emergency_id,
             "status": "assigned",
-            "hospital": {
-                "id": emergency.assigned_hospital_id,
-                "name": "City General Hospital",  # Replace with actual query
-                "address": "123 Main St",
-                "phone": "+91-1234567890",
-                "estimatedArrivalTime": emergency.estimated_arrival_time
-            }
+            "hospitals": mock_hospitals,
+            "message": "Showing nearby hospitals (Mock data for testing)"
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error fetching hospital: {e}")
+        print(f"❌ Error fetching hospitals: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -140,10 +201,20 @@ async def get_hospital_for_emergency(
 @router.get("/status/{emergency_id}")
 async def get_agent_status(emergency_id: int, db: Session = Depends(get_db)):
     """Get emergency processing status"""
+    print(f"📊 Status check for Emergency ID: {emergency_id}")
+    
     emergency = db.query(Emergency).filter(Emergency.id == emergency_id).first()
     
     if not emergency:
         raise HTTPException(status_code=404, detail="Emergency not found")
+    
+    # Auto-update status if still registered (simulate processing)
+    if emergency.status == "REGISTERED":
+        emergency.status = "PROCESSING"
+        emergency.severity = "HIGH"
+        db.commit()
+        db.refresh(emergency)
+        print(f"✅ Updated status to PROCESSING")
     
     return {
         "emergencyId": emergency.id,
@@ -163,6 +234,8 @@ async def notify_hospital(data: dict):
     
     if not hospital_id or not emergency_id:
         raise HTTPException(status_code=400, detail="Missing hospitalId or emergencyId")
+    
+    print(f"📢 Notifying Hospital {hospital_id} about Emergency {emergency_id}")
     
     return {
         "success": True,
