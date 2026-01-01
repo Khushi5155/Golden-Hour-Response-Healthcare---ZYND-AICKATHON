@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { useTriageEmergency } from '../hooks';
+import { useTriageEmergency } from '../hooks/useTriageEmergency';
+import { useEmergencyStatus } from '../hooks/useEmergencyStatus';
 
 // Fix for default marker icon issue in React Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -51,6 +53,9 @@ function LocationMarker({ position, setPosition, setFormData, formData }) {
 }
 
 export default function EmergencyForm({ onEmergencyCreated }) {
+  const navigate = useNavigate();
+  const [emergencyId, setEmergencyId] = useState(null);
+  
   const [formData, setFormData] = useState({
     patientName: '',
     age: '',
@@ -72,7 +77,30 @@ export default function EmergencyForm({ onEmergencyCreated }) {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const { mutate: submitEmergency, isPending, error } = useTriageEmergency();
+  // Hook for submitting emergency
+  const { mutate: submitEmergency, isPending: isSubmitting, error: submitError } = useTriageEmergency();
+
+  // Hook for polling emergency status
+  const { 
+    data: statusData, 
+    isLoading: isPolling,
+    error: pollingError 
+  } = useEmergencyStatus(emergencyId, {
+    enabled: !!emergencyId,
+    onHospitalAssigned: (data) => {
+      console.log('🏥 Hospital assigned:', data);
+      
+      // Navigate to results page with all data
+      navigate('/triage-results', {
+        state: {
+          emergencyId: emergencyId,
+          emergency: data,
+          hospital: data.hospital,
+          patientName: formData.patientName
+        }
+      });
+    }
+  });
 
   const handleChange = (e) => {
     setFormData({
@@ -128,7 +156,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     setSearchResults([]);
     
     try {
-      // Use Nominatim API with corrected URL format and better parameters
       const encodedQuery = encodeURIComponent(searchQuery);
       const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&addressdetails=1&limit=10`;
       
@@ -203,26 +230,25 @@ export default function EmergencyForm({ onEmergencyCreated }) {
       }
     };
 
+    console.log('📤 Submitting emergency:', emergencyData);
+
     submitEmergency(emergencyData, {
       onSuccess: (data) => {
-        alert(`✅ Emergency registered! ID: ${data.emergencyId}`);
-        onEmergencyCreated(data.emergencyId, data);
-        // Reset form
-        setFormData({
-          patientName: '',
-          age: '',
-          gender: '',
-          contact: '',
-          bloodPressure: '',
-          heartRate: '',
-          oxygenLevel: '',
-          symptoms: '',
-          latitude: '',
-          longitude: '',
-          address: ''
-        });
-        setShowMap(false);
-        setMarkerPosition(null);
+        console.log('✅ Emergency submitted successfully:', data);
+        
+        // Start polling by setting emergency ID
+        if (data.emergencyId) {
+          setEmergencyId(data.emergencyId);
+          
+          // Also call the parent callback if provided
+          if (onEmergencyCreated) {
+            onEmergencyCreated(data.emergencyId, data);
+          }
+        }
+      },
+      onError: (error) => {
+        console.error('❌ Submission failed:', error);
+        alert(`❌ Error: ${error.message}`);
       }
     });
   };
@@ -283,6 +309,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
               onChange={handleChange}
               style={styles.input}
               placeholder="Enter full name"
+              required
             />
           </div>
 
@@ -294,6 +321,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
                 value={formData.age}
                 onChange={handleChange}
                 style={styles.select}
+                required
               >
                 <option value="">Select age range</option>
                 {ageRanges.map((range) => (
@@ -311,6 +339,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
                 value={formData.gender}
                 onChange={handleChange}
                 style={styles.select}
+                required
               >
                 <option value="">Select gender</option>
                 {genderOptions.map((option) => (
@@ -331,6 +360,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
               onChange={handleChange}
               style={styles.input}
               placeholder="e.g., +91 9876543210"
+              required
             />
           </div>
         </div>
@@ -503,24 +533,59 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           )}
         </div>
 
+        {/* Status Display - NEW */}
+        {isSubmitting && (
+          <div style={styles.statusBox}>
+            <div style={styles.statusIcon}>📤</div>
+            <div style={styles.statusText}>Submitting emergency request...</div>
+          </div>
+        )}
+
+        {isPolling && statusData && (
+          <div style={styles.statusBox}>
+            <div style={styles.statusIcon}>🔄</div>
+            <div>
+              <div style={styles.statusText}>Finding nearest available hospital...</div>
+              {statusData.severity && (
+                <div style={styles.statusDetail}>
+                  Severity: <span style={{color: '#ff4444'}}>{statusData.severity}</span>
+                </div>
+              )}
+              {statusData.status && (
+                <div style={styles.statusDetail}>
+                  Status: {statusData.status}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Error Display */}
-        {error && (
+        {submitError && (
           <div style={styles.error}>
-            ❌ Error: {error.message}
+            ❌ Error: {submitError.message}
+          </div>
+        )}
+
+        {pollingError && (
+          <div style={{...styles.error, backgroundColor: '#ff9800'}}>
+            ⚠️ Status Check Error: {pollingError.message}
           </div>
         )}
 
         {/* Submit Button */}
         <button 
           type="submit" 
-          disabled={isPending}
+          disabled={isSubmitting || isPolling}
           style={{
             ...styles.submitButton,
-            opacity: isPending ? 0.6 : 1,
-            cursor: isPending ? 'not-allowed' : 'pointer'
+            opacity: (isSubmitting || isPolling) ? 0.6 : 1,
+            cursor: (isSubmitting || isPolling) ? 'not-allowed' : 'pointer'
           }}
         >
-          {isPending ? '⏳ Submitting...' : '🚨 Submit Emergency'}
+          {isSubmitting ? '⏳ Submitting...' : 
+           isPolling ? '🔄 Processing...' : 
+           '🚨 Submit Emergency'}
         </button>
       </form>
     </div>
@@ -727,12 +792,37 @@ const styles = {
     fontSize: '13px',
     fontWeight: 'bold'
   },
+  statusBox: {
+    backgroundColor: '#1e3a5a',
+    border: '2px solid #2196F3',
+    borderRadius: '8px',
+    padding: '15px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
+    animation: 'pulse 2s infinite'
+  },
+  statusIcon: {
+    fontSize: '24px'
+  },
+  statusText: {
+    color: '#64B5F6',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    marginBottom: '5px'
+  },
+  statusDetail: {
+    color: '#aaa',
+    fontSize: '13px',
+    marginTop: '3px'
+  },
   error: {
     backgroundColor: '#ff4444',
     color: 'white',
-    padding: '10px',
+    padding: '12px',
     borderRadius: '5px',
-    textAlign: 'center'
+    textAlign: 'center',
+    fontWeight: 'bold'
   },
   submitButton: {
     backgroundColor: '#ff4444',

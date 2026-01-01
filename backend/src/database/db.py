@@ -184,3 +184,20 @@ if __name__ == "__main__":
     print()
     print("✅ Database setup complete!")
     print(f"💾 Database file: emergency_system.db")
+
+
+# ============================================
+# MOCK HOSPITALS (Import from seed script)
+# ============================================
+try:
+    from .seed_hospitals import HOSPITALS as MOCK_HOSPITALS
+except ImportError:
+    # Fallback if seed_hospitals.py doesn't exist
+    MOCK_HOSPITALS = [
+        {
+            "id": "city_general_hospital",
+            "name": "City General Hospital",
+            "coords": (28.7041, 77.1025),
+            "icu_beds_available": 5
+        }
+    ]

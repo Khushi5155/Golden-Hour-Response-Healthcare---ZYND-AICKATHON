@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import SplashScreen from './components/SplashScreen';
+import LandingPage from './pages/LandingPage';
 import EmergencyForm from './components/EmergencyForm';
 import TriageResults from './components/TriageResults';
 import AgentStatus from './components/AgentStatus';
@@ -19,9 +21,23 @@ const queryClient = new QueryClient({
 
 
 function Dashboard() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [showLanding, setShowLanding] = useState(true);
   const [emergencyId, setEmergencyId] = useState(null);
   const [triageData, setTriageData] = useState(null);
 
+  // Set body background to dark on mount
+  useEffect(() => {
+    document.body.style.backgroundColor = '#0f0f0f';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    
+    return () => {
+      document.body.style.backgroundColor = '';
+      document.body.style.margin = '';
+      document.body.style.padding = '';
+    };
+  }, []);
 
   const handleEmergencyCreated = (id, data) => {
     setEmergencyId(id);
@@ -29,8 +45,40 @@ function Dashboard() {
   };
 
 
+  const handleEmergencyClick = () => {
+    setShowLanding(false);
+  };
+
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
+
+  // Show splash screen for 2 seconds on first load
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
+
+  // Show landing page until user clicks emergency
+  if (showLanding) {
+    return <LandingPage onEmergency={handleEmergencyClick} />;
+  }
+
+
+  // Show main emergency dashboard
   return (
     <div style={styles.dashboard}>
+      {/* Back to Home button */}
+      <button 
+        onClick={() => setShowLanding(true)}
+        style={styles.backButton}
+      >
+        ← Back to Home
+      </button>
+
+
       <header style={styles.header}>
         <h1 style={styles.mainTitle}>⚡ Golden Hour Response Dashboard</h1>
         <p style={styles.subtitle}>AI-Powered Emergency Healthcare System</p>
@@ -53,7 +101,6 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Dashboard />
-      {/* Only show devtools in development, hidden in production */}
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   );
@@ -65,11 +112,30 @@ const styles = {
     minHeight: '100vh',
     backgroundColor: '#0f0f0f',
     padding: '20px',
-    fontFamily: 'Arial, sans-serif'
+    fontFamily: 'Arial, sans-serif',
+    position: 'relative',
+    margin: '0',
+    width: '100%',
+    boxSizing: 'border-box'
+  },
+  backButton: {
+    position: 'fixed',
+    top: '20px',
+    left: '20px',
+    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+    color: '#667eea',
+    border: '1px solid #667eea',
+    padding: '10px 20px',
+    borderRadius: '20px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    zIndex: 1001,
+    transition: 'all 0.3s ease'
   },
   header: {
     textAlign: 'center',
     marginBottom: '30px',
+    marginTop: '50px',
     padding: '20px',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     borderRadius: '15px'

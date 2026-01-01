@@ -3,7 +3,7 @@ import { triageEmergency } from '../services/emergencyService';
 
 /**
  * Hook for submitting emergency triage requests
- * will use this when the form is submitted
+ * Will use this when the form is submitted
  * 
  * Usage:
  * const { mutate: submitEmergency, data, isLoading, error } = useTriageEmergency();
@@ -14,12 +14,19 @@ export const useTriageEmergency = () => {
     mutationFn: (emergencyData) => triageEmergency(emergencyData),
     onSuccess: (data) => {
       console.log('✅ Triage successful:', data);
+      
       // Store emergency ID for future requests
-      localStorage.setItem('currentEmergencyId', data.emergencyId);
+      if (data?.emergencyId) {
+        localStorage.setItem('currentEmergencyId', data.emergencyId);
+        console.log('📝 Stored Emergency ID:', data.emergencyId);
+      }
+      
+      // Return data for component to use
+      return data;
     },
     onError: (error) => {
       console.error('❌ Triage failed:', error.message);
-      // can display this error in the UI
+      // Can display this error in the UI
     },
   });
 };
