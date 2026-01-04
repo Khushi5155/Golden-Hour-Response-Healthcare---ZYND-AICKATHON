@@ -21,7 +21,7 @@ L.Icon.Default.mergeOptions({
 // Component to update map center dynamically
 function ChangeMapView({ center, zoom }) {
   const map = useMap();
-  
+
   useEffect(() => {
     if (center) {
       map.setView(center, zoom || 13, {
@@ -30,7 +30,7 @@ function ChangeMapView({ center, zoom }) {
       });
     }
   }, [center, zoom, map]);
-  
+
   return null;
 }
 
@@ -62,7 +62,7 @@ function LocationMarker({ position, setPosition, setFormData, formData }) {
 export default function EmergencyForm({ onEmergencyCreated }) {
   const navigate = useNavigate();
   const [emergencyId, setEmergencyId] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     patientName: '',
     age: '',
@@ -91,7 +91,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
   const [symptomSuggestions, setSuggestionSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [locationAccuracy, setLocationAccuracy] = useState(null);
-const [isLocating, setIsLocating] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
 
 
 
@@ -151,15 +151,15 @@ const [isLocating, setIsLocating] = useState(false);
 
 
   // Hook for polling emergency status
-  const { 
-    data: statusData, 
+  const {
+    data: statusData,
     isLoading: isPolling,
-    error: pollingError 
+    error: pollingError
   } = useEmergencyStatus(emergencyId, {
     enabled: !!emergencyId,
     onHospitalAssigned: (data) => {
       console.log('🏥 Hospital assigned:', data);
-      
+
       // Navigate to results page with all data
       navigate('/triage-results', {
         state: {
@@ -244,54 +244,54 @@ const [isLocating, setIsLocating] = useState(false);
 
 
   // Get current location using browser geolocation
- const getCurrentLocation = () => {
-  if (!navigator.geolocation) {
-    alert('❌ Geolocation not supported');
-    return;
-  }
-
-  setIsLocating(true);
-  setLocationAccuracy(null);
-
-  const watchId = navigator.geolocation.watchPosition(
-    (position) => {
-      const { latitude, longitude, accuracy } = position.coords;
-
-      // Save accuracy
-      setLocationAccuracy(Math.round(accuracy));
-
-      // ❌ Ignore bad readings
-      if (accuracy > 100) return;
-
-      // ✅ Accept good location
-      setFormData(prev => ({
-        ...prev,
-        latitude: latitude.toString(),
-        longitude: longitude.toString(),
-        address: 'Current Location'
-      }));
-
-      setMapCenter([latitude, longitude]);
-      setMarkerPosition({ lat: latitude, lng: longitude });
-      setShowMap(true);
-
-      navigator.geolocation.clearWatch(watchId);
-      setIsLocating(false);
-
-      alert(`📍 Location locked (±${Math.round(accuracy)}m)`);
-    },
-    (error) => {
-      console.error(error);
-      setIsLocating(false);
-      alert('❌ Location access denied or unavailable');
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 20000,
-      maximumAge: 0
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert('❌ Geolocation not supported');
+      return;
     }
-  );
-};
+
+    setIsLocating(true);
+    setLocationAccuracy(null);
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+
+        // Save accuracy
+        setLocationAccuracy(Math.round(accuracy));
+
+        // ❌ Ignore bad readings
+        if (accuracy > 100) return;
+
+        // ✅ Accept good location
+        setFormData(prev => ({
+          ...prev,
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+          address: 'Current Location'
+        }));
+
+        setMapCenter([latitude, longitude]);
+        setMarkerPosition({ lat: latitude, lng: longitude });
+        setShowMap(true);
+
+        navigator.geolocation.clearWatch(watchId);
+        setIsLocating(false);
+
+        alert(`📍 Location locked (±${Math.round(accuracy)}m)`);
+      },
+      (error) => {
+        console.error(error);
+        setIsLocating(false);
+        alert('❌ Location access denied or unavailable');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 0
+      }
+    );
+  };
 
 
 
@@ -301,27 +301,27 @@ const [isLocating, setIsLocating] = useState(false);
       alert('⚠️ Please enter a location to search');
       return;
     }
-    
+
     setIsSearching(true);
     setSearchResults([]);
-    
+
     try {
       const encodedQuery = encodeURIComponent(searchQuery);
       const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&addressdetails=1&limit=10`;
-      
+
       const response = await fetch(url, {
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'EmergencyHealthcareApp/1.0'
         }
       });
-      
+
       if (!response.ok) {
         throw new Error('Search service unavailable');
       }
-      
+
       const data = await response.json();
-      
+
       if (data.length === 0) {
         alert('❌ No results found. Try:\n• Different spelling\n• Nearby city name\n• Less specific search');
       } else {
@@ -340,14 +340,14 @@ const [isLocating, setIsLocating] = useState(false);
   const selectSearchResult = (result) => {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
-    
+
     setFormData({
       ...formData,
       latitude: lat.toString(),
       longitude: lng.toString(),
       address: result.display_name
     });
-    
+
     setMapCenter([lat, lng]);
     setMarkerPosition({ lat, lng });
     setShowMap(true);
@@ -358,19 +358,19 @@ const [isLocating, setIsLocating] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
+
     // Validate location
     if (!formData.latitude || !formData.longitude) {
       alert('❌ Please select a location on the map');
       return;
     }
-    
+
     // Validate symptoms
     if (selectedSymptoms.length === 0) {
       alert('❌ Please add at least one symptom');
       return;
     }
-    
+
     const emergencyData = {
       patientName: formData.patientName,
       age: formData.age,
@@ -395,11 +395,11 @@ const [isLocating, setIsLocating] = useState(false);
     submitEmergency(emergencyData, {
       onSuccess: (data) => {
         console.log('✅ Emergency submitted successfully:', data);
-        
+
         // Start polling by setting emergency ID
         if (data.emergencyId) {
           setEmergencyId(data.emergencyId);
-          
+
           // Also call the parent callback if provided
           if (onEmergencyCreated) {
             onEmergencyCreated(data.emergencyId, data);
@@ -418,7 +418,7 @@ const [isLocating, setIsLocating] = useState(false);
   const fillTestData = () => {
     const testLat = 28.7041;
     const testLng = 77.1025;
-    
+
     setFormData({
       patientName: 'Rajesh Kumar',
       age: '40-45',
@@ -432,7 +432,7 @@ const [isLocating, setIsLocating] = useState(false);
       longitude: testLng.toString(),
       address: 'New Delhi, India'
     });
-    
+
     setSelectedSymptoms(['Chest pain', 'Shortness of breath', 'Sweating']);
     setMapCenter([testLat, testLng]);
     setMarkerPosition({ lat: testLat, lng: testLng });
@@ -466,7 +466,7 @@ const [isLocating, setIsLocating] = useState(false);
         {/* Patient Info */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Patient Information</h3>
-          
+
           <div style={styles.formGroup}>
             <label style={styles.label}>Patient Name</label>
             <input
@@ -539,7 +539,7 @@ const [isLocating, setIsLocating] = useState(false);
         {/* Vitals */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Vital Signs</h3>
-          
+
           <div style={styles.formGroup}>
             <label style={styles.label}>Blood Pressure</label>
             <input
@@ -589,18 +589,18 @@ const [isLocating, setIsLocating] = useState(false);
         {/* Symptoms - IMPROVED UI */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Symptoms</h3>
-          
+
           <div style={styles.formGroup}>
             <label style={styles.label}>
               Type Symptoms <span style={styles.required}>*</span>
             </label>
-            
+
             {/* Help Box */}
             <div style={styles.symptomHelpBox}>
               <span style={styles.helpIcon}>💡</span>
               <span>Start typing to see suggestions (e.g., "H" for Headache)</span>
             </div>
-            
+
             {/* Symptom Input with Better Styling */}
             <div style={styles.symptomInputContainer}>
               <input
@@ -611,7 +611,7 @@ const [isLocating, setIsLocating] = useState(false);
                 style={styles.symptomInput}
                 placeholder="Type symptom name..."
               />
-              
+
               {/* Suggestions Dropdown */}
               {showSuggestions && symptomSuggestions.length > 0 && (
                 <div style={styles.suggestionsDropdown}>
@@ -630,7 +630,7 @@ const [isLocating, setIsLocating] = useState(false);
                       {symptom}
                     </div>
                   ))}
-                  
+
                   {/* Others Option */}
                   {symptomInput.trim() && (
                     <div
@@ -673,7 +673,7 @@ const [isLocating, setIsLocating] = useState(false);
                 </div>
               </div>
             )}
-            
+
             {/* Validation Message */}
             {selectedSymptoms.length === 0 && (
               <div style={styles.validationHint}>
@@ -687,26 +687,26 @@ const [isLocating, setIsLocating] = useState(false);
         {/* Location Section */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>📍 Location</h3>
-          
+
           {/* Location Buttons */}
           <div style={styles.locationButtons}>
-           <button 
-  type="button"
-  onClick={getCurrentLocation}
-  disabled={isLocating}
-  style={{
-    ...styles.locationButton,
-    opacity: isLocating ? 0.6 : 1,
-    cursor: isLocating ? 'not-allowed' : 'pointer'
-  }}
->
-  {isLocating ? '📡 Detecting location...' : '📍 Use Current Location'}
-</button>
+            <button
+              type="button"
+              onClick={getCurrentLocation}
+              disabled={isLocating}
+              style={{
+                ...styles.locationButton,
+                opacity: isLocating ? 0.6 : 1,
+                cursor: isLocating ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isLocating ? '📡 Detecting location...' : '📍 Use Current Location'}
+            </button>
 
-            <button 
+            <button
               type="button"
               onClick={() => setShowMap(!showMap)}
-              style={{...styles.locationButton, backgroundColor: '#2196F3'}}
+              style={{ ...styles.locationButton, backgroundColor: '#2196F3' }}
             >
               🗺️ {showMap ? 'Hide Map' : 'Select on Map'}
             </button>
@@ -768,17 +768,17 @@ const [isLocating, setIsLocating] = useState(false);
             </div>
           )}
           {locationAccuracy && (
-  <div
-    style={{
-      marginTop: '6px',
-      marginLeft: '28px',
-      fontSize: '0.85rem',
-      color: locationAccuracy <= 50 ? '#2e7d32' : '#f57c00'
-    }}
-  >
-    📡 Accuracy: ±{locationAccuracy} meters
-  </div>
-)}
+            <div
+              style={{
+                marginTop: '6px',
+                marginLeft: '28px',
+                fontSize: '0.85rem',
+                color: locationAccuracy <= 50 ? '#2e7d32' : '#f57c00'
+              }}
+            >
+              📡 Accuracy: ±{locationAccuracy} meters
+            </div>
+          )}
 
 
 
@@ -798,23 +798,23 @@ const [isLocating, setIsLocating] = useState(false);
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <ChangeMapView center={mapCenter} zoom={13} />
-                <LocationMarker 
-                  position={markerPosition} 
+                <LocationMarker
+                  position={markerPosition}
                   setPosition={setMarkerPosition}
                   setFormData={setFormData}
                   formData={formData}
                 />
                 {markerPosition && locationAccuracy && (
-  <Circle
-    center={[markerPosition.lat, markerPosition.lng]}
-    radius={locationAccuracy}
-    pathOptions={{
-      color: locationAccuracy <= 50 ? 'green' : 'orange',
-      fillColor: locationAccuracy <= 50 ? 'green' : 'orange',
-      fillOpacity: 0.15
-    }}
-  />
-)}
+                  <Circle
+                    center={[markerPosition.lat, markerPosition.lng]}
+                    radius={locationAccuracy}
+                    pathOptions={{
+                      color: locationAccuracy <= 50 ? 'green' : 'orange',
+                      fillColor: locationAccuracy <= 50 ? 'green' : 'orange',
+                      fillOpacity: 0.15
+                    }}
+                  />
+                )}
 
               </MapContainer>
             </div>
@@ -838,7 +838,7 @@ const [isLocating, setIsLocating] = useState(false);
               <div style={styles.statusText}>Finding nearest available hospital...</div>
               {statusData.severity && (
                 <div style={styles.statusDetail}>
-                  Severity: <span style={{color: '#ff4444'}}>{statusData.severity}</span>
+                  Severity: <span style={{ color: '#ff4444' }}>{statusData.severity}</span>
                 </div>
               )}
               {statusData.status && (
@@ -860,15 +860,15 @@ const [isLocating, setIsLocating] = useState(false);
 
 
         {pollingError && (
-          <div style={{...styles.error, backgroundColor: '#ff9800'}}>
+          <div style={{ ...styles.error, backgroundColor: '#ff9800' }}>
             ⚠️ Status Check Error: {pollingError.message}
           </div>
         )}
 
 
         {/* Submit Button */}
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={isSubmitting || isPolling}
           style={{
             ...styles.submitButton,
@@ -876,9 +876,9 @@ const [isLocating, setIsLocating] = useState(false);
             cursor: (isSubmitting || isPolling) ? 'not-allowed' : 'pointer'
           }}
         >
-          {isSubmitting ? '⏳ Submitting...' : 
-           isPolling ? '🔄 Processing...' : 
-           '🚨 Submit Emergency'}
+          {isSubmitting ? '⏳ Submitting...' :
+            isPolling ? '🔄 Processing...' :
+              '🚨 Submit Emergency'}
         </button>
       </form>
     </div>
@@ -981,7 +981,7 @@ const styles = {
     resize: 'vertical',
     fontFamily: 'Arial'
   },
-  
+
   // IMPROVED SYMPTOM AUTOCOMPLETE STYLES
   symptomHelpBox: {
     backgroundColor: '#1e3a1e',
