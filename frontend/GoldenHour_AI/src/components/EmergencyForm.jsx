@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap } from 'react-leaflet';
+import { debounce } from 'lodash';
 
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -84,9 +85,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
   const [mapCenter, setMapCenter] = useState(DEFAULT_LOCATION);
 
   const [markerPosition, setMarkerPosition] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
+
 
   // Symptoms autocomplete state
   const [symptomInput, setSymptomInput] = useState('');
@@ -95,6 +94,9 @@ export default function EmergencyForm({ onEmergencyCreated }) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [locationAccuracy, setLocationAccuracy] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
 
 
@@ -151,6 +153,32 @@ export default function EmergencyForm({ onEmergencyCreated }) {
 
   // Hook for submitting emergency
   const { mutate: submitEmergency, isPending: isSubmitting, error: submitError } = useTriageEmergency();
+
+ 
+
+const fetchSearchResults = async (query) => {
+  if (!query.trim()) return setSearchResults([]);
+
+  setIsSearching(true);
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&addressdetails=1&limit=5`;
+
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'EmergencyHealthcareApp/1.0' }
+    });
+    const data = await res.json();
+    setSearchResults(data);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setIsSearching(false);
+  }
+};
+
+// Debounce to reduce API calls
+const debouncedSearch = debounce(fetchSearchResults, 500);
+
 
 
   // Hook for polling emergency status
@@ -735,40 +763,10 @@ const timeoutId = setTimeout(() => {
               💡 Try: "Greater Noida", "Noida Sector 62", "Delhi AIIMS"
             </div>
             <div style={styles.searchContainer}>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
-                style={styles.searchInput}
-                placeholder="Type city, landmark, or area name"
-              />
-              <button
-                type="button"
-                onClick={handleSearch}
-                disabled={isSearching}
-                style={styles.searchButton}
-              >
-                {isSearching ? '⏳' : '🔍'}
-              </button>
-            </div>
+             
 
 
-            {/* Search Results Dropdown */}
-            {searchResults.length > 0 && (
-              <div style={styles.searchResults}>
-                {searchResults.slice(0, 8).map((result, index) => (
-                  <div
-                    key={index}
-                    style={styles.searchResultItem}
-                    onClick={() => selectSearchResult(result)}
-                  >
-                    <div style={styles.resultTitle}>📍 {result.display_name.split(',')[0]}</div>
-                    <div style={styles.resultSubtitle}>{result.display_name}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+
           </div>
 
 
