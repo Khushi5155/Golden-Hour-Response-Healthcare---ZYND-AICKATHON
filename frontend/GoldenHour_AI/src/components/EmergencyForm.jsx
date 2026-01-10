@@ -960,6 +960,8 @@ export default function EmergencyForm({ onEmergencyCreated }) {
                     setShowSuggestions(false);
                   }
                 }}
+                style={styles.searchInput} 
+                placeholder="Type city, landmark, or area name"
               />
 
               {showSuggestions && searchResults.length > 0 && (
