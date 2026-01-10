@@ -264,13 +264,14 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     // Ignore bad readings
     if (accuracy > 500) return;
 
-    // Accept good location
+  
     setFormData(prev => ({
-      ...prev,
-      latitude: latitude.toString(),
-      longitude: longitude.toString(),
-      address: 'Current Location'
-    }));
+  ...prev,
+  latitude: latitude.toString(),
+  longitude: longitude.toString(),
+  address: prev.address || `Selected: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+}));
+
 
     setMapCenter([latitude, longitude]);
     setMarkerPosition({ lat: latitude, lng: longitude });
