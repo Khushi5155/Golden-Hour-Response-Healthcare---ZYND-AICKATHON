@@ -41,12 +41,13 @@ function LocationMarker({ position, setPosition, setFormData, formData }) {
     click(e) {
       const { lat, lng } = e.latlng;
       setPosition({ lat, lng });
-      setFormData({
-        ...formData,
-        latitude: lat.toString(),
-        longitude: lng.toString(),
-        address: `Selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`
-      });
+      setFormData(prev => ({
+  ...prev,
+  latitude: lat.toString(),
+  longitude: lng.toString(),
+  address: prev.address || `Selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`
+}));
+
     },
   });
 
@@ -262,7 +263,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     setLocationAccuracy(Math.round(accuracy));
 
     // Ignore bad readings
-    if (accuracy > 500) return;
+    if (accuracy > 200) return;
 
   
     setFormData(prev => ({
