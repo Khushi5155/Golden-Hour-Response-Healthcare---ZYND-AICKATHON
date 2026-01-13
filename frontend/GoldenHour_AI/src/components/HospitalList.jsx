@@ -1,222 +1,166 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+// src/components/HospitalList.jsx
+
 import { useEffect, useState } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
-// Fix default marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// Custom icons
-const emergencyIcon = new L.Icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const hospitalIcon = new L.Icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const ambulanceIcon = new L.Icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-function AmbulanceTracker({
-  emergencyLocation,
-  ambulanceStartLocation,
-  needsAmbulance,
-  onAmbulanceArrival,
-}) {
-  const map = useMap();
-  const [currentPosition, setCurrentPosition] = useState(ambulanceStartLocation);
-  const [arrived, setArrived] = useState(false);
-
-  useEffect(() => {
-    if (!needsAmbulance) return;
-    if (!ambulanceStartLocation || !emergencyLocation) return;
-
-    const startLat = ambulanceStartLocation.lat;
-    const startLng = ambulanceStartLocation.lng;
-    const endLat = emergencyLocation.lat;
-    const endLng = emergencyLocation.lng;
-
-    if (
-      [startLat, startLng, endLat, endLng].some(
-        (v) => typeof v !== 'number' || isNaN(v),
-      )
-    ) {
-      return;
-    }
-
-    const steps = 100;
-    let currentStep = 0;
-
-    const interval = setInterval(() => {
-      currentStep++;
-      const progress = currentStep / steps;
-
-      const newLat = startLat + (endLat - startLat) * progress;
-      const newLng = startLng + (endLng - startLng) * progress;
-
-      setCurrentPosition({ lat: newLat, lng: newLng });
-      map.setView([newLat, newLng], 13);
-
-      if (currentStep >= steps) {
-        clearInterval(interval);
-        setArrived(true);
-        if (onAmbulanceArrival) {
-          onAmbulanceArrival();
-        }
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [ambulanceStartLocation, emergencyLocation, needsAmbulance, map, onAmbulanceArrival]);
-
-  if (!needsAmbulance || !currentPosition) return null;
-
-  return (
-    <Marker position={[currentPosition.lat, currentPosition.lng]} icon={ambulanceIcon}>
-      <Popup>🚑 Ambulance {arrived ? '(Arrived!)' : '(En Route)'}</Popup>
-    </Marker>
-  );
+// Haversine formula to calculate distance between two lat/lng points in km
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+  
+  return distance.toFixed(1); // Return distance in km with 1 decimal
 }
 
-export default function AmbulanceMap({
-  emergencyLocation,
-  hospitalLocation,
-  ambulanceStartLocation,
-  needsAmbulance,
-  onAmbulanceArrival,
-}) {
-  // Normalize coordinates (accept lat/lng or latitude/longitude, strings or numbers)
-  const normalizeCoord = (coord) => {
-    if (!coord) return null;
-    const latRaw = coord.lat ?? coord.latitude;
-    const lngRaw = coord.lng ?? coord.longitude;
+export default function HospitalList({ emergencyId, emergencyLocation, onHospitalSelect }) {
+  const [hospitalsWithDistance, setHospitalsWithDistance] = useState([]);
 
-    const lat = typeof latRaw === 'string' ? parseFloat(latRaw) : latRaw;
-    const lng = typeof lngRaw === 'string' ? parseFloat(lngRaw) : lngRaw;
+  const hospitals = [
+    {
+      id: 1,
+      name: 'Apollo Hospital',
+      location: 'Sarita Vihar, New Delhi',
+      latitude: 28.5355,
+      longitude: 77.2670,
+    },
+    {
+      id: 2,
+      name: 'AIIMS Delhi',
+      location: 'Ansari Nagar, New Delhi',
+      latitude: 28.5672,
+      longitude: 77.2100,
+    },
+    {
+      id: 3,
+      name: 'Fortis Hospital',
+      location: 'Sector 62, Noida',
+      latitude: 28.6280,
+      longitude: 77.3700,
+    },
+    {
+      id: 4,
+      name: 'Max Super Specialty Hospital',
+      location: 'Patparganj, East Delhi',
+      latitude: 28.6290,
+      longitude: 77.2973,
+    },
+    {
+      id: 5,
+      name: 'Yatharth Hospital',
+      location: 'Sector 110, Noida',
+      latitude: 28.5250,
+      longitude: 77.3890,
+    },
+    {
+      id: 6,
+      name: 'Kailash Hospital',
+      location: 'Sector 71, Noida',
+      latitude: 28.5763,
+      longitude: 77.3803,
+    },
+    {
+      id: 7,
+      name: 'Metro Hospital',
+      location: 'Sector 11, Noida',
+      latitude: 28.5813,
+      longitude: 77.3240,
+    },
+    {
+      id: 8,
+      name: 'Sharda Hospital',
+      location: 'Greater Noida',
+      latitude: 28.4647,
+      longitude: 77.4938,
+    },
+    {
+      id: 9,
+      name: 'Max Hospital',
+      location: 'Vaishali, Ghaziabad',
+      latitude: 28.6490,
+      longitude: 77.3410,
+    },
+  ];
 
-    if (typeof lat !== 'number' || typeof lng !== 'number') return null;
-    if (isNaN(lat) || isNaN(lng)) return null;
+  useEffect(() => {
+    console.log('HospitalList mounted. emergencyId =', emergencyId);
+    console.log('Emergency location:', emergencyLocation);
 
-    return { lat, lng, name: coord.name };
-  };
+    // Calculate distances if emergency location is available
+    if (emergencyLocation && emergencyLocation.lat && emergencyLocation.lng) {
+      const hospitalsWithDist = hospitals.map((h) => ({
+        ...h,
+        distance: calculateDistance(
+          emergencyLocation.lat,
+          emergencyLocation.lng,
+          h.latitude,
+          h.longitude
+        ),
+      }));
 
-  const normalizedEmergency = normalizeCoord(emergencyLocation);
-  const normalizedHospital = normalizeCoord(hospitalLocation);
-  const normalizedAmbulance = normalizeCoord(ambulanceStartLocation);
+      // Sort by distance (nearest first)
+      hospitalsWithDist.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
 
-  const hasCoords = (coord) =>
-    coord && typeof coord.lat === 'number' && typeof coord.lng === 'number';
+      setHospitalsWithDistance(hospitalsWithDist);
+    } else {
+      // If no emergency location, show hospitals without distance
+      setHospitalsWithDistance(hospitals.map((h) => ({ ...h, distance: '—' })));
+    }
+  }, [emergencyId, emergencyLocation]);
 
-  // Debug logs to see exactly what arrives
-  console.log('=== AmbulanceMap Props ===');
-  console.log('raw emergencyLocation:', emergencyLocation);
-  console.log('raw hospitalLocation:', hospitalLocation);
-  console.log('raw ambulanceStartLocation:', ambulanceStartLocation);
-  console.log('normalizedEmergency:', normalizedEmergency);
-  console.log('normalizedHospital:', normalizedHospital);
-  console.log('normalizedAmbulance:', normalizedAmbulance);
-  console.log('needsAmbulance:', needsAmbulance);
-
-  // If emergency location is still not usable, just don't render the map (no red error)
-  if (!hasCoords(normalizedEmergency)) {
+  if (!emergencyId) {
     return null;
   }
-
-  if (!hasCoords(normalizedHospital)) {
-    return null;
-  }
-
-  const center = [normalizedEmergency.lat, normalizedEmergency.lng];
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>🗺️ Live Route Tracking</h2>
-
-      <div style={styles.mapWrapper}>
-        <MapContainer center={center} zoom={13} style={styles.map} scrollWheelZoom={true}>
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-
-          <Marker position={center} icon={emergencyIcon}>
-            <Popup>
-              🚨 Emergency Location
-              <br />
-              Patient location
-            </Popup>
-          </Marker>
-
-          {hasCoords(normalizedHospital) && (
-            <Marker
-              position={[normalizedHospital.lat, normalizedHospital.lng]}
-              icon={hospitalIcon}
-            >
-              <Popup>
-                🏥 {normalizedHospital.name || hospitalLocation?.name || 'Selected Hospital'}
-                <br />
-                Destination
-              </Popup>
-            </Marker>
-          )}
-
-          {needsAmbulance && hasCoords(normalizedAmbulance) && (
-            <AmbulanceTracker
-              emergencyLocation={normalizedEmergency}
-              ambulanceStartLocation={normalizedAmbulance}
-              needsAmbulance={needsAmbulance}
-              onAmbulanceArrival={onAmbulanceArrival}
-            />
-          )}
-        </MapContainer>
+      <div style={styles.header}>
+        <h3 style={styles.title}>🏥 Available Hospitals</h3>
+        <p style={styles.subtitle}>
+          {emergencyLocation?.lat && emergencyLocation?.lng
+            ? 'Sorted by distance from emergency location'
+            : 'Select the nearest hospital to dispatch ambulance'}
+        </p>
       </div>
 
-      <div style={styles.legend}>
-        <div style={styles.legendItem}>
-          <span style={{ ...styles.legendDot, backgroundColor: '#ff4444' }}>🔴</span>
-          <span>Emergency Location</span>
-        </div>
-        <div style={styles.legendItem}>
-          <span style={{ ...styles.legendDot, backgroundColor: '#4CAF50' }}>🟢</span>
-          <span>Hospital</span>
-        </div>
-        {needsAmbulance && (
-          <div style={styles.legendItem}>
-            <span style={{ ...styles.legendDot, backgroundColor: '#2196F3' }}>🔵</span>
-            <span>Ambulance (Moving)</span>
-          </div>
-        )}
+      <div style={styles.grid}>
+        {hospitalsWithDistance.map((h) => (
+          <button
+            key={h.id}
+            style={styles.card}
+            onClick={() => onHospitalSelect(h)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 20px rgba(76, 175, 80, 0.3)';
+              e.currentTarget.style.borderColor = '#4CAF50';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+              e.currentTarget.style.borderColor = '#333';
+            }}
+          >
+            <div style={styles.cardHeader}>
+              <div style={styles.hospitalIcon}>🏥</div>
+              <div style={styles.distance}>
+                {h.distance === '—' ? h.distance : `${h.distance} km`}
+              </div>
+            </div>
+            <div style={styles.name}>{h.name}</div>
+            <div style={styles.location}>
+              <span style={styles.locationIcon}>📍</span>
+              {h.location}
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -225,52 +169,76 @@ export default function AmbulanceMap({
 const styles = {
   container: {
     backgroundColor: '#1a1a1a',
-    padding: '20px',
-    borderRadius: '10px',
+    padding: '30px 20px',
+    borderRadius: '12px',
     marginTop: '20px',
+    border: '2px solid #2a2a2a',
+  },
+  header: {
+    textAlign: 'center',
+    marginBottom: '25px',
   },
   title: {
+    margin: 0,
+    marginBottom: '8px',
+    fontSize: '24px',
     color: '#4CAF50',
-    margin: '0 0 20px 0',
-    textAlign: 'center',
+    fontWeight: 'bold',
   },
-  mapWrapper: {
-    borderRadius: '10px',
-    overflow: 'hidden',
-    border: '2px solid #333',
+  subtitle: {
+    margin: 0,
+    fontSize: '14px',
+    color: '#aaa',
   },
-  map: {
-    height: '500px',
-    width: '100%',
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '15px',
   },
-  legend: {
+  card: {
     display: 'flex',
-    justifyContent: 'center',
-    gap: '30px',
-    marginTop: '15px',
-    padding: '15px',
+    flexDirection: 'column',
+    padding: '18px',
+    borderRadius: '10px',
+    border: '2px solid #333',
     backgroundColor: '#2a2a2a',
-    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    textAlign: 'left',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+    outline: 'none',
   },
-  legendItem: {
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '12px',
+  },
+  hospitalIcon: {
+    fontSize: '28px',
+  },
+  distance: {
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    padding: '4px 10px',
+    borderRadius: '12px',
+  },
+  name: {
+    fontSize: '17px',
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: '8px',
+  },
+  location: {
+    fontSize: '13px',
+    color: '#bbb',
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    color: 'white',
+    gap: '6px',
+  },
+  locationIcon: {
     fontSize: '14px',
-  },
-  legendDot: {
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%',
-    display: 'inline-block',
-  },
-  error: {
-    backgroundColor: '#ff4444',
-    color: 'white',
-    padding: '20px',
-    borderRadius: '10px',
-    marginTop: '20px',
-    fontFamily: 'monospace',
   },
 };

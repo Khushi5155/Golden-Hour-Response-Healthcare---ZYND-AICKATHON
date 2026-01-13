@@ -164,6 +164,7 @@ function Dashboard() {
           <p style={{ color: 'yellow', textAlign: 'center' }}>🟡 Step 3: Select hospital</p>
           <HospitalList
             emergencyId={emergencyId}
+            emergencyLocation={triageData?.location}
             onHospitalSelect={handleHospitalSelection}
           />
         </div>
