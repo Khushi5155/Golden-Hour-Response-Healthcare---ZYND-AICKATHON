@@ -1,8 +1,9 @@
 from src.agents.base_agent import BaseAgent
 from src.models.schemas import TriageInput
+from src.zynd.mock_zynd import zynd_registry
+
 
 class TriageAgent(BaseAgent):
-
     def __init__(self):
         super().__init__(
             did="did:zynd:agent_triage_abc123",
@@ -44,9 +45,14 @@ class TriageAgent(BaseAgent):
             "severity": severity,
             "priority": priority,
             "estimated_risk": risk,
-            "recommended_specialists": specialists
+            "recommended_specialists": specialists,
         }
 
-    # Add this method so routes.py works
     def classify_emergency(self, payload: dict) -> dict:
         return self.execute(payload)
+
+
+triage_agent = TriageAgent()
+
+# 🔗 Register with mock Zynd registry
+zynd_registry.register_agent(triage_agent.did, triage_agent.execute)

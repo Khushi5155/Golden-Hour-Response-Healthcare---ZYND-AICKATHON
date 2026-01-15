@@ -3,8 +3,9 @@ from typing import List, Dict, Optional
 
 
 class LocationData(BaseModel):
-    lat: float = Field(..., ge=-90, le=90)
-    lng: float = Field(..., ge=-180, le=180)
+    # Optional coordinates so null / missing is allowed
+    lat: Optional[float] = Field(None, ge=-90, le=90)
+    lng: Optional[float] = Field(None, ge=-180, le=180)
 
 
 class Vitals(BaseModel):
@@ -16,19 +17,20 @@ class Vitals(BaseModel):
 class TriageInput(BaseModel):
     """Schema matching the new frontend form"""
     patientName: str
-    age: str  # Changed from int to str (e.g., "40-45")
+    age: str          # e.g. "40-45"
     gender: str
     contact: str
     vitals: Vitals
-    symptoms: str  # Changed from List[str] to str
-    location: LocationData
+    symptoms: str     # single string from form
+    # Make location optional so backend accepts null / absence
+    location: Optional[LocationData] = None
 
 
 class EmergencyRequest(BaseModel):
     """Legacy schema for backward compatibility"""
     location: LocationData
     symptoms: List[str]
-    vitals: dict
+    vitals: Dict
     age: int
     description: str
     contact_email: str
