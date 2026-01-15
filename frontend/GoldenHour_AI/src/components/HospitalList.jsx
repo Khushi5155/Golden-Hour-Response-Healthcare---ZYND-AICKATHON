@@ -1,231 +1,122 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { useEffect, useState, useRef } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+// src/components/HospitalList.jsx
 
-// Fix default marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+import { useEffect, useState } from "react";
+import { getHospitalsForEmergency } from "../services/emergencyService";
 
-// Custom icons
-const emergencyIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-const hospitalIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-const ambulanceIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-function AmbulanceTracker({ 
-  emergencyLocation, 
-  hospitalLocation, 
-  ambulanceStartLocation, 
-  needsAmbulance,
-  onAmbulanceArrival 
-}) {
-  const map = useMap();
-  const [currentPosition, setCurrentPosition] = useState(ambulanceStartLocation);
-  const [arrived, setArrived] = useState(false);
-  const animationRef = useRef(null);
-  const hasStartedRef = useRef(false);
+export default function HospitalList({ emergencyId, emergencyLocation, onHospitalSelect }) {
+  const [hospitalsWithDistance, setHospitalsWithDistance] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Only run animation once
-    if (!needsAmbulance || hasStartedRef.current || arrived) return;
+    if (!emergencyId) return;
 
-    hasStartedRef.current = true;
-    console.log('🚑 Starting ambulance animation...');
+    const fetchHospitals = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    const startLat = ambulanceStartLocation.lat;
-    const startLng = ambulanceStartLocation.lng;
-    const endLat = emergencyLocation.lat;
-    const endLng = emergencyLocation.lng;
+        // Backend: { emergencyId, status, hospitals: [...] }
+        const data = await getHospitalsForEmergency(emergencyId);
+        const hospitals = data.hospitals || [];
 
-    const steps = 100;
-    let currentStep = 0;
+        // Just to be safe, sort by distance if backend did not
+        const sorted = [...hospitals].sort((a, b) => {
+          if (a.distance == null) return 1;
+          if (b.distance == null) return -1;
+          return a.distance - b.distance;
+        });
 
-    animationRef.current = setInterval(() => {
-      currentStep++;
-      const progress = currentStep / steps;
-
-      const newLat = startLat + (endLat - startLat) * progress;
-      const newLng = startLng + (endLng - startLng) * progress;
-
-      setCurrentPosition({ lat: newLat, lng: newLng });
-      
-      // Only move map view every 10 steps to reduce jumpiness
-      if (currentStep % 10 === 0) {
-        map.setView([newLat, newLng], 13, { animate: true });
-      }
-
-      if (currentStep >= steps) {
-        console.log('🚑 Ambulance arrived!');
-        clearInterval(animationRef.current);
-        setArrived(true);
-        setCurrentPosition(emergencyLocation); // Ensure it stops exactly at emergency
-        if (onAmbulanceArrival) {
-          onAmbulanceArrival();
-        }
-      }
-    }, 100); // 100ms per step = 10 seconds total
-
-    return () => {
-      if (animationRef.current) {
-        clearInterval(animationRef.current);
+        setHospitalsWithDistance(sorted);
+      } catch (err) {
+        console.error("Error fetching hospitals:", err);
+        setError(err.message || "Failed to load hospitals");
+      } finally {
+        setLoading(false);
       }
     };
-  }, []); // Empty dependency array - only run once!
 
-  if (!needsAmbulance) return null;
+    fetchHospitals();
+  }, [emergencyId]);
 
-  return (
-    <Marker position={[currentPosition.lat, currentPosition.lng]} icon={ambulanceIcon}>
-      <Popup>
-        <strong>🚑 Ambulance</strong><br />
-        {arrived ? '✅ Arrived at Emergency!' : '🚦 En Route...'}
-      </Popup>
-    </Marker>
-  );
-}
+  if (!emergencyId) return null;
 
-export default function AmbulanceMap({ 
-  emergencyLocation, 
-  hospitalLocation, 
-  ambulanceStartLocation, 
-  needsAmbulance,
-  onAmbulanceArrival 
-}) {
-  // Validate coordinates
-  const isValidCoord = (coord) => {
-    return coord && 
-           typeof coord.lat === 'number' && 
-           typeof coord.lng === 'number' &&
-           !isNaN(coord.lat) && 
-           !isNaN(coord.lng) &&
-           coord.lat !== 0 &&
-           coord.lng !== 0;
-  };
-
-  // Debug logs
-  console.log('=== AmbulanceMap Props ===');
-  console.log('emergencyLocation:', emergencyLocation);
-  console.log('hospitalLocation:', hospitalLocation);
-  console.log('ambulanceStartLocation:', ambulanceStartLocation);
-  console.log('needsAmbulance:', needsAmbulance);
-
-  // Validate all required coordinates
-  if (!isValidCoord(emergencyLocation)) {
+  if (loading) {
     return (
-      <div style={styles.error}>
-        ❌ Error: Invalid emergency location coordinates
-        <pre>{JSON.stringify(emergencyLocation, null, 2)}</pre>
+      <div style={styles.container}>
+        <p style={{ color: "#fff" }}>Loading hospitals...</p>
       </div>
     );
   }
 
-  if (!isValidCoord(hospitalLocation)) {
+  if (error) {
     return (
-      <div style={styles.error}>
-        ❌ Error: Invalid hospital location coordinates
-        <pre>{JSON.stringify(hospitalLocation, null, 2)}</pre>
+      <div style={styles.container}>
+        <p style={{ color: "#ff4444" }}>Error: {error}</p>
       </div>
     );
   }
-
-  if (needsAmbulance && !isValidCoord(ambulanceStartLocation)) {
-    return (
-      <div style={styles.error}>
-        ❌ Error: Invalid ambulance location coordinates
-        <pre>{JSON.stringify(ambulanceStartLocation, null, 2)}</pre>
-      </div>
-    );
-  }
-
-  const center = [emergencyLocation.lat, emergencyLocation.lng];
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>🗺️ Live Route Tracking</h2>
-      
-      <div style={styles.mapWrapper}>
-        <MapContainer
-          center={center}
-          zoom={13}
-          style={styles.map}
-          scrollWheelZoom={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          
-          <Marker position={center} icon={emergencyIcon}>
-            <Popup>
-              <strong>🚨 Emergency Location</strong><br />
-              Patient needs immediate help
-            </Popup>
-          </Marker>
-          
-          <Marker 
-            position={[hospitalLocation.lat, hospitalLocation.lng]} 
-            icon={hospitalIcon}
-          >
-            <Popup>
-              <strong>🏥 {hospitalLocation.name || 'Hospital'}</strong><br />
-              Selected destination
-            </Popup>
-          </Marker>
-
-          {needsAmbulance && ambulanceStartLocation && (
-            <AmbulanceTracker
-              emergencyLocation={emergencyLocation}
-              hospitalLocation={hospitalLocation}
-              ambulanceStartLocation={ambulanceStartLocation}
-              needsAmbulance={needsAmbulance}
-              onAmbulanceArrival={onAmbulanceArrival}
-            />
-          )}
-        </MapContainer>
+      <div style={styles.header}>
+        <h3 style={styles.title}>🏥 Available Hospitals</h3>
+        <p style={styles.subtitle}>
+          Showing nearby hospitals for this emergency
+        </p>
       </div>
 
-      <div style={styles.legend}>
-        <div style={styles.legendItem}>
-          <span style={{...styles.legendDot, backgroundColor: '#ff4444'}}>🔴</span>
-          <span>Emergency Location</span>
-        </div>
-        <div style={styles.legendItem}>
-          <span style={{...styles.legendDot, backgroundColor: '#4CAF50'}}>🟢</span>
-          <span>Hospital</span>
-        </div>
-        {needsAmbulance && (
-          <div style={styles.legendItem}>
-            <span style={{...styles.legendDot, backgroundColor: '#2196F3'}}>🔵</span>
-            <span>Ambulance (Moving)</span>
-          </div>
-        )}
+      <div style={styles.grid}>
+        {hospitalsWithDistance.map((h) => (
+          <button
+            key={h.id}
+            style={styles.card}
+            onClick={() => onHospitalSelect && onHospitalSelect(h)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow =
+                "0 8px 20px rgba(76, 175, 80, 0.3)";
+              e.currentTarget.style.borderColor = "#4CAF50";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow =
+                "0 4px 12px rgba(0, 0, 0, 0.3)";
+              e.currentTarget.style.borderColor = "#333";
+            }}
+          >
+            <div style={styles.cardHeader}>
+              <div style={styles.hospitalIcon}>🏥</div>
+              <div style={styles.distance}>
+                {h.distance != null ? `${h.distance} km` : "—"}
+              </div>
+            </div>
+
+            <div style={styles.name}>{h.name}</div>
+
+            <div style={styles.location}>
+              <span style={styles.locationIcon}>📍</span>
+              {h.address}
+            </div>
+
+            <div style={{ marginTop: 8, fontSize: 12, color: "#ccc" }}>
+              ETA: {h.eta != null ? `${h.eta} min` : "—"}
+            </div>
+
+            {h.isRecommended && (
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 11,
+                  color: "#4CAF50",
+                  fontWeight: "bold",
+                }}
+              >
+                ⭐ Recommended
+              </div>
+            )}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -233,53 +124,77 @@ export default function AmbulanceMap({
 
 const styles = {
   container: {
-    backgroundColor: '#1a1a1a',
-    padding: '20px',
-    borderRadius: '10px',
-    marginTop: '20px'
+    backgroundColor: "#1a1a1a",
+    padding: "30px 20px",
+    borderRadius: "12px",
+    marginTop: "20px",
+    border: "2px solid #2a2a2a",
+  },
+  header: {
+    textAlign: "center",
+    marginBottom: "25px",
   },
   title: {
-    color: '#4CAF50',
-    margin: '0 0 20px 0',
-    textAlign: 'center'
+    margin: 0,
+    marginBottom: "8px",
+    fontSize: "24px",
+    color: "#4CAF50",
+    fontWeight: "bold",
   },
-  mapWrapper: {
-    borderRadius: '10px',
-    overflow: 'hidden',
-    border: '2px solid #333'
+  subtitle: {
+    margin: 0,
+    fontSize: "14px",
+    color: "#aaa",
   },
-  map: {
-    height: '500px',
-    width: '100%'
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "15px",
   },
-  legend: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '30px',
-    marginTop: '15px',
-    padding: '15px',
-    backgroundColor: '#2a2a2a',
-    borderRadius: '8px'
+  card: {
+    display: "flex",
+    flexDirection: "column",
+    padding: "18px",
+    borderRadius: "10px",
+    border: "2px solid #333",
+    backgroundColor: "#2a2a2a",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    textAlign: "left",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+    outline: "none",
   },
-  legendItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    color: 'white',
-    fontSize: '14px'
+  cardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "12px",
   },
-  legendDot: {
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%',
-    display: 'inline-block'
+  hospitalIcon: {
+    fontSize: "28px",
   },
-  error: {
-    backgroundColor: '#ff4444',
-    color: 'white',
-    padding: '20px',
-    borderRadius: '10px',
-    marginTop: '20px',
-    fontFamily: 'monospace'
-  }
+  distance: {
+    fontSize: "12px",
+    fontWeight: "bold",
+    color: "#4CAF50",
+    backgroundColor: "rgba(76, 175, 80, 0.15)",
+    padding: "4px 10px",
+    borderRadius: "12px",
+  },
+  name: {
+    fontSize: "17px",
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: "8px",
+  },
+  location: {
+    fontSize: "13px",
+    color: "#bbb",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  locationIcon: {
+    fontSize: "14px",
+  },
 };

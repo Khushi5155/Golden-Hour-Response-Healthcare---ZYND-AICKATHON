@@ -1,81 +1,116 @@
-import apiClient from './api';
+// src/services/emergencyService.js
+import apiClient from "./api";
 
-// Submit new emergency to triage agent
-export const triageEmergency = async (emergencyData) => {
-  const response = await apiClient.post('/triage', emergencyData);
+// ---------- TRIAGE ----------
+
+// Used by EmergencyForm: send full TriageInput payload to /triage
+export const triageEmergency = async (formData) => {
+  const payload = {
+    patientName: formData.patientName,
+    age: formData.age,
+    gender: formData.gender,
+    contact: formData.contact,
+    symptoms: formData.symptoms,
+    vitals: {
+      bloodPressure: formData.bloodPressure,
+      heartRate: formData.heartRate,
+      oxygenLevel: formData.oxygenLevel,
+    },
+    location: {
+      lat: Number(formData.latitude),
+      lng: Number(formData.longitude),
+    },
+  };
+
+  const response = await apiClient.post("/triage", payload);
   return response.data;
 };
 
-// Get list of available hospitals
-export const fetchHospitals = async (emergencyId) => {
-  const response = await apiClient.get(`/hospitals/${emergencyId}`);
-  return response.data;
-};
+// ---------- STATUS ----------
 
-// Get current status of emergency
-export const getAgentStatus = async (emergencyId) => {
+// Single status check
+export const getEmergencyStatus = async (emergencyId) => {
   const response = await apiClient.get(`/status/${emergencyId}`);
   return response.data;
 };
 
-// Send notification to hospital
-export const notifyHospital = async (hospitalId, emergencyId) => {
-  const response = await apiClient.post('/notify', {
-    hospitalId,
-    emergencyId
-  });
-  return response.data;
-};
-
-// NEW: Poll emergency status with retry logic
+// Poll status until hospital is assigned (optional helper)
 export const pollEmergencyStatus = async (emergencyId, maxAttempts = 30) => {
   let attempts = 0;
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const checkStatus = async () => {
     try {
       const response = await apiClient.get(`/status/${emergencyId}`);
       const statusData = response.data;
 
-      console.log('📊 Status check:', statusData);
+      console.log("📊 Status check:", statusData);
 
-      // Check if hospital is assigned
-      if (statusData.status === 'ASSIGNED' || statusData.assignedHospital) {
+      if (statusData.status === "ASSIGNED" || statusData.assignedHospital) {
         return statusData;
       }
 
-      // Continue polling if not assigned yet
-      attempts++;
+      attempts += 1;
       if (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
-        return await checkStatus(); // Recursive call
-      } else {
-        throw new Error('Hospital assignment timeout');
-      }
-
-    } catch (error) {
-      console.error('❌ Status polling error:', error);
-      attempts++;
-      
-      if (attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await sleep(2000);
         return await checkStatus();
-      } else {
-        throw error;
       }
+      throw new Error("Hospital assignment timeout");
+    } catch (error) {
+      console.error("❌ Status polling error:", error);
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        await sleep(2000);
+        return await checkStatus();
+      }
+      throw error;
     }
   };
 
-  return await checkStatus();
+  return checkStatus();
 };
 
-// NEW: Get emergency status (single check, no polling)
-export const getEmergencyStatus = async (emergencyId) => {
-  const response = await apiClient.get(`/status/${emergencyId}`);
+// ---------- HOSPITALS ----------
+
+// List of hospitals with distance/ETA
+export const getHospitalsForEmergency = async (emergencyId) => {
+  const response = await apiClient.get(`/hospitals/${emergencyId}`);
   return response.data;
 };
 
-// NEW: Get hospital details for emergency
-export const getHospitalForEmergency = async (emergencyId) => {
-  const response = await apiClient.get(`/hospitals/${emergencyId}`);
+// Selected / nearest hospital
+export const getSelectedHospital = async (emergencyId) => {
+  const response = await apiClient.get(`/hospitals/${emergencyId}/selected`);
+  return response.data;
+};
+
+// Legacy alias if some code still uses this name
+export const getHospitalForEmergency = getHospitalsForEmergency;
+
+// ---------- AMBULANCE ----------
+
+export const getAmbulanceLocation = async (emergencyId) => {
+  const response = await apiClient.get(`/ambulance/${emergencyId}`);
+  return response.data;
+};
+
+// ---------- NOTIFY ----------
+
+// Supports both notifyHospital({ hospitalId, emergencyId }) and notifyHospital(hospitalId, emergencyId)
+export const notifyHospital = async (payloadOrHospitalId, emergencyId) => {
+  let payload = payloadOrHospitalId;
+
+  if (
+    typeof payloadOrHospitalId === "number" &&
+    typeof emergencyId !== "undefined"
+  ) {
+    payload = {
+      hospitalId: payloadOrHospitalId,
+      emergencyId,
+    };
+  }
+
+  const response = await apiClient.post("/notify", payload);
   return response.data;
 };

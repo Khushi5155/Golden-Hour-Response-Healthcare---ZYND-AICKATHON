@@ -1,23 +1,26 @@
+// src/hooks/useHospitals.js
 import { useQuery } from '@tanstack/react-query';
-import { fetchHospitals } from '../services/emergencyService';
+import { getHospitalsForEmergency } from '../services/emergencyService';
 
 /**
  * Hook for fetching available hospitals
  * Automatically refetches every 30 seconds to get updated bed availability
- * 
+ *
  * Usage:
- * const { data: hospitals, isLoading, error, refetch } = useHospitals(emergencyId);
+ * const { data, isLoading, error, refetch } = useHospitals(emergencyId);
+ * data => { emergencyId, status, hospitals: [...] }
  */
 export const useHospitals = (emergencyId) => {
   return useQuery({
     queryKey: ['hospitals', emergencyId],
-    queryFn: () => fetchHospitals(emergencyId),
+    queryFn: () => getHospitalsForEmergency(emergencyId),
     enabled: !!emergencyId, // Only run if emergencyId exists
-    refetchInterval: 30000, // Refetch every 30 seconds for Golden Hour updates
-    staleTime: 20000, // Consider data stale after 20 seconds
-    retry: 3, // Retry 3 times if it fails
+    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 20000,
+    retry: 3,
     onSuccess: (data) => {
-      console.log('🏥 Hospitals updated:', data.length, 'hospitals found');
+      const count = Array.isArray(data?.hospitals) ? data.hospitals.length : 0;
+      console.log('🏥 Hospitals updated:', count, 'hospitals found');
     },
     onError: (error) => {
       console.error('❌ Failed to fetch hospitals:', error.message);

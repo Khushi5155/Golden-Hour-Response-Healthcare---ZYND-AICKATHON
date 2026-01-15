@@ -102,9 +102,8 @@ export default function EmergencyForm({ onEmergencyCreated }) {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Comprehensive symptoms database
+  // Comprehensive symptoms database (truncated here for brevity, keep full list)
   const symptomsDatabase = [
-    // A
     "Abdominal pain",
     "Abdominal swelling",
     "Acid reflux",
@@ -115,7 +114,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Anxiety",
     "Arm pain",
     "Arm weakness",
-    // B
     "Back pain",
     "Bleeding",
     "Blisters",
@@ -129,7 +127,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Breathing difficulty",
     "Bruising",
     "Burning sensation",
-    // C
     "Chest pain",
     "Chest tightness",
     "Chills",
@@ -143,7 +140,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Coughing up blood",
     "Cramps",
     "Crying spells",
-    // D
     "Decreased appetite",
     "Dehydration",
     "Depression",
@@ -157,7 +153,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Drowsiness",
     "Dry mouth",
     "Dry skin",
-    // E
     "Ear pain",
     "Ear ringing",
     "Excessive sweating",
@@ -165,7 +160,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Eye pain",
     "Eye redness",
     "Eye swelling",
-    // F
     "Facial pain",
     "Facial swelling",
     "Fainting",
@@ -176,11 +170,9 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Foot pain",
     "Forgetfulness",
     "Frequent urination",
-    // G
     "Gas",
     "Groin pain",
     "Gum bleeding",
-    // H
     "Hair loss",
     "Hallucinations",
     "Hand numbness",
@@ -196,7 +188,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Hives",
     "Hoarseness",
     "Hot flashes",
-    // I
     "Increased appetite",
     "Indigestion",
     "Insomnia",
@@ -204,16 +195,13 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Irritability",
     "Itching",
     "Itchy eyes",
-    // J
     "Jaundice",
     "Jaw pain",
     "Joint pain",
     "Joint stiffness",
     "Joint swelling",
-    // K
     "Kidney pain",
     "Knee pain",
-    // L
     "Lack of coordination",
     "Leg cramps",
     "Leg pain",
@@ -226,7 +214,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Low blood pressure",
     "Lower back pain",
     "Lump in throat",
-    // M
     "Memory loss",
     "Menstrual cramps",
     "Mood swings",
@@ -236,7 +223,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Muscle spasms",
     "Muscle stiffness",
     "Muscle weakness",
-    // N
     "Nasal congestion",
     "Nausea",
     "Neck pain",
@@ -245,15 +231,12 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Night sweats",
     "Nosebleed",
     "Numbness",
-    // O
     "Obesity",
-    // P
     "Painful urination",
     "Pale skin",
     "Pelvic pain",
     "Pins and needles",
     "Poor appetite",
-    // R
     "Rapid breathing",
     "Rapid heartbeat",
     "Rash",
@@ -261,7 +244,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Redness",
     "Restlessness",
     "Runny nose",
-    // S
     "Sadness",
     "Scalp itching",
     "Seizures",
@@ -286,7 +268,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Swelling",
     "Swollen glands",
     "Swollen lymph nodes",
-    // T
     "Thirst",
     "Throat irritation",
     "Tingling",
@@ -294,14 +275,12 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Tiredness",
     "Toothache",
     "Tremors",
-    // U
     "Unintentional weight loss",
     "Unusual bleeding",
     "Upper abdominal pain",
     "Upset stomach",
     "Urinary incontinence",
     "Urinary urgency",
-    // V
     "Vaginal bleeding",
     "Vaginal discharge",
     "Vertigo",
@@ -309,26 +288,24 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "Vision loss",
     "Vomiting",
     "Vomiting blood",
-    // W
     "Watery eyes",
     "Weakness",
     "Weight gain",
     "Weight loss",
     "Wheezing",
-    // Y
     "Yellowing of skin",
   ];
 
-  // Hook for submitting emergency
+  // Hook for submitting emergency (calls /triage through emergencyService)
   const {
     mutate: submitEmergency,
     isPending: isSubmitting,
     error: submitError,
   } = useTriageEmergency();
 
+  // Debounced location search
   const fetchSearchResults = async (query) => {
     if (!query.trim()) return setSearchResults([]);
-
     setIsSearching(true);
     try {
       const encodedQuery = encodeURIComponent(query);
@@ -349,10 +326,9 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     }
   };
 
-  // Debounce to reduce API calls
   const debouncedSearch = debounce(fetchSearchResults, 500);
 
-  // Hook for polling emergency status
+  // Poll status; when hospital assigned, go to /triage-results
   const {
     data: statusData,
     isLoading: isPolling,
@@ -360,12 +336,9 @@ export default function EmergencyForm({ onEmergencyCreated }) {
   } = useEmergencyStatus(emergencyId, {
     enabled: !!emergencyId,
     onHospitalAssigned: (data) => {
-      console.log("🏥 Hospital assigned:", data);
-
-      // Navigate to results page with all data
       navigate("/triage-results", {
         state: {
-          emergencyId: emergencyId,
+          emergencyId,
           emergency: data,
           hospital: data.hospital,
           patientName: formData.patientName,
@@ -381,13 +354,12 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     });
   };
 
-  // Handle symptom input change with autocomplete
+  // Symptom input change with autocomplete
   const handleSymptomInputChange = (e) => {
     const value = e.target.value;
     setSymptomInput(value);
 
     if (value.trim().length > 0) {
-      // Filter symptoms based on input
       const filtered = symptomsDatabase.filter((symptom) =>
         symptom.toLowerCase().startsWith(value.toLowerCase())
       );
@@ -399,7 +371,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     }
   };
 
-  // Add symptom from suggestion
   const addSymptom = (symptom) => {
     if (!selectedSymptoms.includes(symptom)) {
       const newSymptoms = [...selectedSymptoms, symptom];
@@ -411,7 +382,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     setShowSuggestions(false);
   };
 
-  // Add "Others" option
   const addOtherSymptom = () => {
     if (
       symptomInput.trim() &&
@@ -426,14 +396,12 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     setShowSuggestions(false);
   };
 
-  // Remove symptom
   const removeSymptom = (symptom) => {
     const newSymptoms = selectedSymptoms.filter((s) => s !== symptom);
     setSelectedSymptoms(newSymptoms);
     updateFormDataSymptoms(newSymptoms);
   };
 
-  // Update formData symptoms
   const updateFormDataSymptoms = (symptoms) => {
     setFormData({
       ...formData,
@@ -441,7 +409,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     });
   };
 
-  // Get current location using browser geolocation
+  // Geolocation
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       alert("❌ Geolocation not supported");
@@ -457,7 +425,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
 
         setLocationAccuracy(Math.round(accuracy));
 
-        // Ignore bad readings
         if (accuracy > 200) return;
 
         setFormData((prev) => ({
@@ -500,7 +467,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     }, 25000);
   };
 
-  // Improved search using Nominatim API directly
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       alert("⚠️ Please enter a location to search");
@@ -544,7 +510,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     }
   };
 
-  // Handle search result selection
   const selectSearchResult = (result) => {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
@@ -564,53 +529,63 @@ export default function EmergencyForm({ onEmergencyCreated }) {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    // Validate location
-    if (!formData.latitude || !formData.longitude) {
-      alert("❌ Please select a location on the map");
-      return;
-    }
+  if (!formData.latitude || !formData.longitude) {
+    alert("❌ Please select a location on the map");
+    return;
+  }
 
-    // Validate symptoms
-    if (selectedSymptoms.length === 0) {
-      alert("❌ Please add at least one symptom");
-      return;
-    }
-
-    const emergencyData = {
-      patientName: formData.patientName,
-      age: formData.age,
-      gender: formData.gender,
-      contact: formData.contact,
-      vitals: {
-        bloodPressure: formData.bloodPressure,
-        heartRate: formData.heartRate ? parseInt(formData.heartRate) : null,
-        oxygenLevel: formData.oxygenLevel
-          ? parseInt(formData.oxygenLevel)
-          : null,
-      },
-      symptoms: formData.symptoms,
-      location: {
-        lat: parseFloat(formData.latitude),
-        lng: parseFloat(formData.longitude),
-      },
-    };
-
-    console.log("📤 Submitting emergency:", emergencyData);
+  const emergencyData = {
+    patientName: formData.patientName,
+    age: formData.age,
+    gender: formData.gender,
+    contact: formData.contact,
+    vitals: {
+      bloodPressure: formData.bloodPressure,
+      heartRate: formData.heartRate ? parseInt(formData.heartRate) : null,
+      oxygenLevel: formData.oxygenLevel
+        ? parseInt(formData.oxygenLevel)
+        : null,
+    },
+    symptoms: formData.symptoms,
+    location: {
+      lat: parseFloat(formData.latitude),
+      lng: parseFloat(formData.longitude),
+    },
+  };
 
     submitEmergency(emergencyData, {
       onSuccess: (data) => {
-        console.log("✅ Emergency submitted successfully:", data);
+        const emergencyIdFromApi =
+          data.emergencyId || data.emergency_id || data.id;
 
-        // Start polling by setting emergency ID
-        if (data.emergencyId) {
-          setEmergencyId(data.emergencyId);
+        const emergencyLocation = {
+          lat:
+            (data.location && data.location.lat) ??
+            data.latitude ??
+            data.lat ??
+            (markerPosition && markerPosition.lat) ??
+            (formData.latitude ? parseFloat(formData.latitude) : 0),
+          lng:
+            (data.location && data.location.lng) ??
+            data.longitude ??
+            data.lng ??
+            (markerPosition && markerPosition.lng) ??
+            (formData.longitude ? parseFloat(formData.longitude) : 0),
+        };
 
-          // Also call the parent callback if provided
-          if (onEmergencyCreated) {
-            onEmergencyCreated(data.emergencyId, data);
-          }
+        const triageData = {
+          ...data,
+          location: emergencyLocation,
+        };
+
+        if (emergencyIdFromApi) {
+          setEmergencyId(emergencyIdFromApi);
+        }
+
+        if (onEmergencyCreated && emergencyIdFromApi) {
+          onEmergencyCreated(emergencyIdFromApi, triageData);
         }
       },
       onError: (error) => {
@@ -620,7 +595,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     });
   };
 
-  // Auto-fill with test data
   const fillTestData = () => {
     const testLat = 28.5708;
     const testLng = 77.326;
@@ -645,7 +619,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     setShowMap(true);
   };
 
-  // Age range options
   const ageRanges = [
     "0-5",
     "5-10",
@@ -670,7 +643,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
     "100+",
   ];
 
-  // Gender options
   const genderOptions = ["Male", "Female", "Others"];
 
   return (
@@ -683,7 +655,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
       </div>
 
       <form onSubmit={handleSubmit} style={styles.form}>
-        {/* Patient Info */}
+        {/* Patient Information */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Patient Information</h3>
 
@@ -799,7 +771,7 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           </div>
         </div>
 
-        {/* Symptoms - IMPROVED UI */}
+        {/* Symptoms */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>Symptoms</h3>
 
@@ -808,7 +780,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
               Type Symptoms <span style={styles.required}>*</span>
             </label>
 
-            {/* Help Box */}
             <div style={styles.symptomHelpBox}>
               <span style={styles.helpIcon}>💡</span>
               <span>
@@ -816,7 +787,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
               </span>
             </div>
 
-            {/* Symptom Input with Better Styling */}
             <div style={styles.symptomInputContainer}>
               <input
                 type="text"
@@ -827,7 +797,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
                 placeholder="Type symptom name..."
               />
 
-              {/* Suggestions Dropdown */}
               {showSuggestions && symptomSuggestions.length > 0 && (
                 <div style={styles.suggestionsDropdown}>
                   <div style={styles.suggestionsHeader}>
@@ -850,7 +819,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
                     </div>
                   ))}
 
-                  {/* Others Option */}
                   {symptomInput.trim() && (
                     <div
                       style={styles.othersOption}
@@ -870,7 +838,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
               )}
             </div>
 
-            {/* Selected Symptoms Tags */}
             {selectedSymptoms.length > 0 && (
               <div style={styles.selectedSymptomsContainer}>
                 <div style={styles.selectedSymptomsHeader}>
@@ -900,7 +867,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
               </div>
             )}
 
-            {/* Validation Message */}
             {selectedSymptoms.length === 0 && (
               <div style={styles.validationHint}>
                 ⚠️ Please add at least one symptom to continue
@@ -909,11 +875,10 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           </div>
         </div>
 
-        {/* Location Section */}
+        {/* Location */}
         <div style={styles.section}>
           <h3 style={styles.sectionTitle}>📍 Location</h3>
 
-          {/* Location Buttons */}
           <div style={styles.locationButtons}>
             <button
               type="button"
@@ -939,7 +904,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
             </button>
           </div>
 
-          {/* Search Location */}
           <div style={styles.formGroup}>
             <label style={styles.label}>Search Location</label>
             <div style={styles.searchHelp}>
@@ -953,14 +917,14 @@ export default function EmergencyForm({ onEmergencyCreated }) {
                   const query = e.target.value;
                   setSearchQuery(query);
                   if (query.trim()) {
-                    debouncedSearch(query); // calls Nominatim API
-                    setShowSuggestions(true); // show dropdown immediately
+                    debouncedSearch(query);
+                    setShowSuggestions(true);
                   } else {
                     setSearchResults([]);
                     setShowSuggestions(false);
                   }
                 }}
-                style={styles.searchInput} 
+                style={styles.searchInput}
                 placeholder="Type city, landmark, or area name"
               />
 
@@ -994,7 +958,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
                       const lat = parseFloat(result.lat);
                       const lng = parseFloat(result.lon);
 
-                      // Update form & map instantly
                       setFormData({
                         ...formData,
                         latitude: lat.toString(),
@@ -1005,7 +968,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
                       setMapCenter([lat, lng]);
                       setMarkerPosition({ lat, lng });
 
-                      // Clear search results & query
                       setSearchResults([]);
                       setSearchQuery("");
                       setShowMap(true);
@@ -1023,7 +985,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
             )}
           </div>
 
-          {/* Selected Location Display */}
           {formData.address && (
             <div style={styles.locationDisplay}>
               <div style={styles.locationIcon}>📍</div>
@@ -1046,7 +1007,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
             </div>
           )}
 
-          {/* OpenStreetMap Display */}
           {showMap && (
             <div style={styles.mapContainer}>
               <div style={styles.mapInstructions}>
@@ -1084,7 +1044,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           )}
         </div>
 
-        {/* Status Display */}
         {isSubmitting && (
           <div style={styles.statusBox}>
             <div style={styles.statusIcon}>📤</div>
@@ -1116,7 +1075,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           </div>
         )}
 
-        {/* Error Display */}
         {submitError && (
           <div style={styles.error}>❌ Error: {submitError.message}</div>
         )}
@@ -1127,7 +1085,6 @@ export default function EmergencyForm({ onEmergencyCreated }) {
           </div>
         )}
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={isSubmitting || isPolling}
@@ -1243,8 +1200,6 @@ const styles = {
     resize: "vertical",
     fontFamily: "Arial",
   },
-
-  // IMPROVED SYMPTOM AUTOCOMPLETE STYLES
   symptomHelpBox: {
     backgroundColor: "#1e3a1e",
     color: "#81C784",
@@ -1400,7 +1355,6 @@ const styles = {
     border: "1px solid #FF9800",
     textAlign: "center",
   },
-
   locationButtons: {
     display: "flex",
     gap: "10px",

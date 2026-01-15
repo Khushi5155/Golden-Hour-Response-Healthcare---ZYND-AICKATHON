@@ -1,19 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import { getAgentStatus } from '../services/emergencyService';
+import { getEmergencyStatus } from '../services/emergencyService';
 
 /**
- * Hook for tracking AI agent processing status
- * Shows what agents are doing in real-time
- * 
+ * Hook for tracking AI agent processing status.
+ *
  * Usage:
  * const { data: agentStatus, isLoading } = useAgentStatus(emergencyId);
  */
 export const useAgentStatus = (emergencyId) => {
   return useQuery({
     queryKey: ['agentStatus', emergencyId],
-    queryFn: () => getAgentStatus(emergencyId),
+    queryFn: () => getEmergencyStatus(emergencyId),
     enabled: !!emergencyId,
-    refetchInterval: 5000, // Check agent status every 5 seconds
+    refetchInterval: 5000, // every 5s
     staleTime: 4000,
     retry: 2,
     onSuccess: (data) => {
