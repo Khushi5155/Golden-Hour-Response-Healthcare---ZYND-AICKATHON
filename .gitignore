@@ -1,10 +1,6 @@
-# Python
-backend/venv/
-backend/__pycache__/
-backend/*.pyc
-backend/.env
-backend/*.db
-backend/*.log
+#js-backend
+js-backend/.env
+node_modules/
 
 # React
 frontend/node_modules/

@@ -119,8 +119,6 @@ backend/src/api/
 ---
 
 
----
-
 ## 🚀 How to Run the Project
 
 ### 1️⃣ Clone Repository
@@ -131,43 +129,35 @@ cd Golden-Hour-Response-Healthcare---ZYND-AICKATHON
 
 ```
 
-### 2️⃣ Backend Setup
+### 2️⃣ Backend Setup (JS Backend)
 
 ```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate
-
-pip install -r requirements.txt
+cd js-backend
+npm init -y
+npm install express mongoose bcryptjs jsonwebtoken dotenv cors
 
 ```
 #### Run the backend 
 
 ```bash
-uvicorn src.main:app --reload
+node server.js
 
 ```
 #### Backend URL 
 ```bash
-http://localhost:8000
+http://localhost:5000
 ```
-
-#### API Documentation (Swagger UI)
-```bash
-http://localhost:8000/docs
-```
-
+---
 
 ### 3️⃣ Frontend Setup
 
 ```bash
-cd frontend/GoldenHour_AI
-rm -rf node_modules package-lock.json
+cd frontend
 npm install
 npm run dev
 
 ```
-## Screenshots
+
 
 ---
 
@@ -186,12 +176,6 @@ npm run dev
 ---
 
 ## 🔮 Future Enhancements
-
-* Real ZYND Protocol integration
-* Live ambulance GPS tracking
-* Predictive response-time analytics
-* Integration with hospital management systems
-* Mobile emergency alerts
 
 ---
 
